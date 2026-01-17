@@ -1,4 +1,4 @@
-const API_URL = "https://hotel-booking-233l.onrender.com";
+const API_URL = "/api";
 
 let selectedBooking = null;
 
@@ -85,3 +85,4 @@ function closeModal() {
 }
 
 loadStatus();
+
