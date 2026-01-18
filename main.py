@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from booking_logic import (
     room_exists, is_occupied, commit_booking,
-    vacate_booking, reset_hotel, state, ALL_ROOMS, random_room
+    vacate_booking, reset_hotel, state, ALL_ROOMS,
+    random_room, floor_of, book_multiple
 )
 
 app = FastAPI()
@@ -13,6 +14,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/rooms/status")
 def status():
@@ -34,32 +36,70 @@ def status():
         ]
     return result
 
+
 @app.post("/book")
-def book(room: int):
-    if not room_exists(room):
-        raise HTTPException(400, f"Room {room} does not exist.")
-    if is_occupied(room):
-        raise HTTPException(400, f"Room {room} is already occupied.")
-    bid = commit_booking(room)
-    return {"status": "booked", "booking_id": bid, "room": room}
+def book(value: int):
+    """
+    Booking logic:
+    - value >= 100 → treat as single room
+    - value < 100 → treat as count (multi-room)
+    """
+
+    # Single room booking
+    if value >= 100:
+        if not room_exists(value):
+            raise HTTPException(400, f"Room {value} does not exist.")
+        if is_occupied(value):
+            raise HTTPException(400, f"Room {value} is already occupied.")
+
+        rooms, bid = commit_booking(value)
+        return {
+            "status": "booked",
+            "booking_id": bid,
+            "rooms": rooms
+        }
+
+    # Multi-room requested
+    count = value
+    if count < 1:
+        raise HTTPException(400, "Invalid room count.")
+
+    rooms = book_multiple(count)
+
+    if len(rooms) < count:
+        raise HTTPException(400, "Not enough rooms available.")
+
+    bid = state["next_booking_id"]
+    state["bookings"].append({"id": bid, "rooms": rooms})
+    state["next_booking_id"] += 1
+
+    return {
+        "status": "booked",
+        "booking_id": bid,
+        "rooms": rooms
+    }
+
 
 @app.post("/vacate")
 def vacate(bid: int):
     vacate_booking(bid)
     return {"status": "vacated", "booking_id": bid}
 
+
 @app.post("/reset")
 def reset():
     reset_hotel()
     return {"status": "reset"}
+
 
 @app.post("/random")
 def random_fill():
     rm = random_room()
     if not rm:
         raise HTTPException(400, "No rooms available.")
-    bid = commit_booking(rm)
-    return {"status": "booked", "booking_id": bid, "room": rm}
+    rooms, bid = commit_booking(rm)
+    return {"status": "booked", "booking_id": bid, "rooms": rooms}
+
 
 @app.get("/bookings")
 def bookings():
