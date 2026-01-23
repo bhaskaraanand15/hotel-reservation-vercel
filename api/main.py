@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from booking_logic import (
+from .booking_logic import (
     room_exists, is_occupied, commit_booking,
     vacate_booking, reset_hotel, state, ALL_ROOMS,
-    random_room, floor_of, book_multiple
+    random_room, book_multiple
 )
 
 app = FastAPI()
@@ -41,11 +41,11 @@ def status():
 def book(value: int):
     """
     Booking logic:
-    - value >= 100 → treat as single room
-    - value < 100 → treat as count (multi-room)
+    - value >= 100 → single room
+    - value < 100 → bulk booking (count)
     """
 
-    # Single room booking
+    # Single room booking (value interpreted as room number)
     if value >= 100:
         if not room_exists(value):
             raise HTTPException(400, f"Room {value} does not exist.")
@@ -53,31 +53,22 @@ def book(value: int):
             raise HTTPException(400, f"Room {value} is already occupied.")
 
         rooms, bid = commit_booking(value)
-        return {
-            "status": "booked",
-            "booking_id": bid,
-            "rooms": rooms
-        }
+        return {"status": "booked", "booking_id": bid, "rooms": rooms}
 
-    # Multi-room requested
+    # Bulk booking (value interpreted as count)
     count = value
     if count < 1:
         raise HTTPException(400, "Invalid room count.")
 
     rooms = book_multiple(count)
-
     if len(rooms) < count:
-        raise HTTPException(400, "Not enough rooms available.")
+        raise HTTPException(400, "Not enough rooms available for bulk booking.")
 
     bid = state["next_booking_id"]
     state["bookings"].append({"id": bid, "rooms": rooms})
     state["next_booking_id"] += 1
 
-    return {
-        "status": "booked",
-        "booking_id": bid,
-        "rooms": rooms
-    }
+    return {"status": "booked", "booking_id": bid, "rooms": rooms}
 
 
 @app.post("/vacate")
@@ -95,8 +86,9 @@ def reset():
 @app.post("/random")
 def random_fill():
     rm = random_room()
-    if not rm:
+    if rm is None:
         raise HTTPException(400, "No rooms available.")
+
     rooms, bid = commit_booking(rm)
     return {"status": "booked", "booking_id": bid, "rooms": rooms}
 
