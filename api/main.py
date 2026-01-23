@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from .booking_logic import (
+from booking_logic import (
     room_exists, is_occupied, commit_booking,
     vacate_booking, reset_hotel, state, ALL_ROOMS,
-    random_room, book_multiple
+    random_room
 )
 
 app = FastAPI()
@@ -39,36 +39,18 @@ def status():
 
 @app.post("/book")
 def book(value: int):
-    """
-    Booking logic:
-    - value >= 100 → single room
-    - value < 100 → bulk booking (count)
-    """
+    rooms, bid_or_err = commit_booking(value)
 
-    # Single room booking (value interpreted as room number)
-    if value >= 100:
-        if not room_exists(value):
-            raise HTTPException(400, f"Room {value} does not exist.")
-        if is_occupied(value):
-            raise HTTPException(400, f"Room {value} is already occupied.")
+    # Error case
+    if rooms is None:
+        raise HTTPException(400, bid_or_err)
 
-        rooms, bid = commit_booking(value)
-        return {"status": "booked", "booking_id": bid, "rooms": rooms}
-
-    # Bulk booking (value interpreted as count)
-    count = value
-    if count < 1:
-        raise HTTPException(400, "Invalid room count.")
-
-    rooms = book_multiple(count)
-    if len(rooms) < count:
-        raise HTTPException(400, "Not enough rooms available for bulk booking.")
-
-    bid = state["next_booking_id"]
-    state["bookings"].append({"id": bid, "rooms": rooms})
-    state["next_booking_id"] += 1
-
-    return {"status": "booked", "booking_id": bid, "rooms": rooms}
+    # Success
+    return {
+        "status": "booked",
+        "booking_id": bid_or_err,
+        "rooms": rooms
+    }
 
 
 @app.post("/vacate")
@@ -90,7 +72,11 @@ def random_fill():
         raise HTTPException(400, "No rooms available.")
 
     rooms, bid = commit_booking(rm)
-    return {"status": "booked", "booking_id": bid, "rooms": rooms}
+    return {
+        "status": "booked",
+        "booking_id": bid,
+        "rooms": rooms
+    }
 
 
 @app.get("/bookings")
