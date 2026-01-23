@@ -11,51 +11,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/rooms/status")
 def status():
-    occupied = {}
+    occ = {}
     for b in logic.state["bookings"]:
         for r in b["rooms"]:
-            occupied[r] = b["id"]
+            occ[r] = b["id"]
 
-    result = {}
-    for floor in range(1, 11):
-        result[floor] = [
-            {"room": r, "occupied": r in occupied, "booking_id": occupied.get(r)}
-            for r in logic.ALL_ROOMS[floor]
+    return {
+        f: [
+            {"room": r, "occupied": r in occ, "booking_id": occ.get(r)}
+            for r in logic.ALL_ROOMS[f]
         ]
-    return result
-
+        for f in range(1, 11)
+    }
 
 @app.post("/book")
 def book(value: int):
-    rooms, bid = logic.commit_booking(value)
+    rooms, bid_or_err = logic.commit_booking(value)
     if rooms is None:
-        raise HTTPException(400, bid)
-    return {"status": "booked", "booking_id": bid, "rooms": rooms}
-
+        raise HTTPException(400, bid_or_err)
+    return {"status": "booked", "booking_id": bid_or_err, "rooms": rooms}
 
 @app.post("/vacate")
 def vacate(bid: int):
-    logic.vacate_booking(bid)
-    return {"status": "vacated", "booking_id": bid}
-
+    logic.vacate(bid)
+    return {"status": "vacated"}
 
 @app.post("/reset")
 def reset():
-    logic.reset_hotel()
+    logic.reset()
     return {"status": "reset"}
-
 
 @app.post("/random")
 def random():
-    rm = logic.random_room()
-    if rm is None:
-        raise HTTPException(400, "No rooms available")
-    rooms, bid = logic.commit_booking(rm)
+    r = logic.random_room()
+    if r is None:
+        raise HTTPException(400, "No rooms free")
+    rooms, bid = logic.commit_booking(r)
     return {"status": "booked", "booking_id": bid, "rooms": rooms}
-
 
 @app.get("/bookings")
 def bookings():
