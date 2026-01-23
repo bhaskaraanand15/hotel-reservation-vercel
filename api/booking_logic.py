@@ -1,6 +1,10 @@
+# booking_logic.py
+
 import random
 
-# Build hotel structure
+# Room definitions
+# Floors 1–9 → 100–910
+# Floor 10 → 1001–1007
 ALL_ROOMS = {
     floor: (
         [1000 + i for i in range(1, 8)] if floor == 10
@@ -9,19 +13,22 @@ ALL_ROOMS = {
     for floor in range(1, 11)
 }
 
-# In-memory state (Vercel safe)
+# Stateful in-memory booking system
 state = {
     "next_booking_id": 1,
-    "bookings": []
+    "bookings": []  # each = { id: int, rooms: [list-of-rooms] }
 }
 
-def room_exists(room: int):
+
+def room_exists(room: int) -> bool:
     return any(room in rooms for rooms in ALL_ROOMS.values())
 
-def floor_of(room: int):
+
+def floor_of(room: int) -> int:
     if room >= 1000:
         return 10
     return room // 100
+
 
 def get_occupied_rooms():
     occ = []
@@ -29,15 +36,15 @@ def get_occupied_rooms():
         occ += b["rooms"]
     return occ
 
-def is_occupied(room: int):
+
+def is_occupied(room: int) -> bool:
     return room in get_occupied_rooms()
 
-def available_by_floor():
+
+def available_rooms():
     occ = set(get_occupied_rooms())
-    return {
-        f: [r for r in ALL_ROOMS[f] if r not in occ]
-        for f in ALL_ROOMS
-    }
+    return [r for f in ALL_ROOMS for r in ALL_ROOMS[f] if r not in occ]
+
 
 def book_single(room: int):
     bid = state["next_booking_id"]
@@ -45,68 +52,85 @@ def book_single(room: int):
     state["next_booking_id"] += 1
     return [room], bid
 
-def book_bulk(count: int):
-    free = available_by_floor()
 
-    # 1. Try same floor contiguous clusters
-    for floor in range(1, 11):
-        frooms = free[floor]
-        if len(frooms) >= count:
-            return frooms[:count]
+def book_multiple(count: int, preferred_floor=None):
+    occupied = set(get_occupied_rooms())
+    result = []
 
-    # 2. Try group allocation minimizing travel distance
-    best = None
-    best_score = 1e9
+    # ---- 1. Fill same floor first (travel time = 0) ----
+    if preferred_floor:
+        for r in ALL_ROOMS[preferred_floor]:
+            if r not in occupied and len(result) < count:
+                result.append(r)
 
-    for start_floor in range(1, 11):
-        candidate = []
-        floors = list(range(start_floor, 0, -1)) + list(range(start_floor + 1, 11))
-        floors = [start_floor] + floors
+    # ---- 2. Closest floors next (travel priority 1,2,3…) ----
+    if len(result) < count:
+        for dist in range(1, 10):
+            for direction in (-1, 1):
+                f = (preferred_floor or 5) + dist * direction  # fallback center = floor 5
+                if f < 1 or f > 10:
+                    continue
 
-        for f in floors:
-            for r in free[f]:
-                if len(candidate) < count:
-                    candidate.append(r)
-            if len(candidate) == count:
+                for r in ALL_ROOMS[f]:
+                    if r not in occupied and len(result) < count:
+                        result.append(r)
+
+            if len(result) >= count:
                 break
 
-        if len(candidate) == count:
-            rooms_sorted = sorted(candidate)
-            floor_span = abs(floor_of(rooms_sorted[0]) - floor_of(rooms_sorted[-1]))
-            room_span = max(rooms_sorted) - min(rooms_sorted)
-            score = floor_span * 100 + room_span
-            if score < best_score:
-                best = candidate
-                best_score = score
+    # ---- 3. If still not enough, fill absolute global free ----
+    if len(result) < count:
+        for f in range(1, 11):
+            for r in ALL_ROOMS[f]:
+                if r not in occupied and len(result) < count:
+                    result.append(r)
 
-    return best or []
+    return result
+
 
 def commit_booking(value: int):
-    if value >= 100:
-        if not room_exists(value):
-            return None, "Room does not exist"
-        if is_occupied(value):
-            return None, "Room occupied"
-        return book_single(value)
+    """
+    Booking Interpretation:
+    - Value >= 100 → exact room number
+    - Value < 100 → count (bulk)
+    """
+    if value >= 100:  # exact room
+        room = value
 
+        if not room_exists(room):
+            return None, "Room does not exist"
+        if is_occupied(room):
+            return None, "Room is already occupied"
+
+        return book_single(room)
+
+    # Bulk booking
     count = value
-    rooms = book_bulk(count)
-    if not rooms or len(rooms) < count:
-        return None, "Not enough rooms"
+    if count <= 0:
+        return None, "Invalid room count"
+
+    preferred_floor = 5  # neutral center, improves packing
+    rooms = book_multiple(count, preferred_floor)
+
+    if len(rooms) < count:
+        return None, "Not enough rooms available"
 
     bid = state["next_booking_id"]
     state["bookings"].append({"id": bid, "rooms": rooms})
     state["next_booking_id"] += 1
+
     return rooms, bid
+
 
 def vacate(bid: int):
     state["bookings"] = [b for b in state["bookings"] if b["id"] != bid]
+
 
 def reset():
     state["bookings"] = []
     state["next_booking_id"] = 1
 
+
 def random_room():
-    occ = set(get_occupied_rooms())
-    available = [r for f in ALL_ROOMS for r in ALL_ROOMS[f] if r not in occ]
-    return random.choice(available) if available else None
+    free = available_rooms()
+    return random.choice(free) if free else None
