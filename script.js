@@ -1,79 +1,78 @@
-const inputEl = document.getElementById("roomInput");
-const gridEl = document.getElementById("hotelGrid");
+const API = "/api";
 
 async function loadStatus() {
-  const res = await fetch(`/rooms/status`);
+  const res = await fetch(`${API}/rooms/status`);
   const data = await res.json();
   renderGrid(data);
 }
 
 function renderGrid(data) {
-  gridEl.innerHTML = "";
+  const grid = document.getElementById("hotelGrid");
+  grid.innerHTML = "";
 
   for (let floor = 10; floor >= 1; floor--) {
     const row = document.createElement("div");
-    row.className = "floor-row";
+    row.classList.add("floor-row");
 
     const label = document.createElement("span");
-    label.className = "floor-label";
-    label.textContent = `Floor ${floor}`;
+    label.classList.add("floor-label");
+    label.innerText = `Floor ${floor}`;
     row.appendChild(label);
 
-    for (const cell of data[floor]) {
+    for (let r of data[floor]) {
       const div = document.createElement("div");
-      div.className = "room";
-      div.textContent = cell.room;
+      div.classList.add("room");
+      div.innerText = r.room;
 
-      if (cell.occupied) {
+      if (r.occupied) {
         div.classList.add("occupied");
-        div.onclick = () => vacatePopup(cell.booking_id, cell.room);
+        div.onclick = () => openVacateModal(r.booking_id, r.room);
       }
 
       row.appendChild(div);
     }
 
-    gridEl.appendChild(row);
+    grid.appendChild(row);
   }
 }
 
 async function bookRoom() {
-  let val = parseInt(inputEl.value);
-  if (!val) {
-    alert("Enter a value 1–5 (bulk) or >=100 (room)");
-    return;
-  }
+  const val = parseInt(document.getElementById("roomInput").value);
+  if (!val) return alert("Enter value");
 
-  const res = await fetch(`/book?value=${val}`, { method: "POST" });
-  const out = await res.json();
-
+  const res = await fetch(`${API}/book?value=${val}`, { method: "POST" });
   if (!res.ok) {
-    alert(out.detail || "Booking failed");
-    return;
+    alert((await res.json()).detail);
   }
-
-  alert(`Allocated rooms: [${out.rooms.join(", ")}]`);
   loadStatus();
 }
 
 async function randomFill() {
-  const res = await fetch(`/random`, { method: "POST" });
-  const out = await res.json();
-  alert(`Allocated random room: [${out.rooms.join(", ")}]`);
+  await fetch(`${API}/random`, { method: "POST" });
   loadStatus();
 }
 
 async function resetHotel() {
-  await fetch(`/reset`, { method: "POST" });
+  await fetch(`${API}/reset`, { method: "POST" });
   loadStatus();
-  alert("Hotel reset");
 }
 
-async function vacatePopup(bid, room) {
-  const ok = confirm(`Vacate booking #${bid}? (Room ${room})`);
-  if (!ok) return;
+function openVacateModal(bid, room) {
+  document.getElementById("modalTitle").innerText = `Vacate Booking #${bid}`;
+  document.getElementById("modalRoom").innerText = `Room: ${room}`;
+  document.getElementById("vacateModal").style.display = "flex";
 
-  await fetch(`/vacate?bid=${bid}`, { method: "POST" });
-  loadStatus();
+  document.getElementById("confirmVacateBtn").onclick = async () => {
+    await fetch(`${API}/vacate?bid=${bid}`, { method: "POST" });
+    closeModal();
+    loadStatus();
+  };
+
+  document.getElementById("cancelVacateBtn").onclick = closeModal;
+}
+
+function closeModal() {
+  document.getElementById("vacateModal").style.display = "none";
 }
 
 loadStatus();
