@@ -1,33 +1,50 @@
 body {
   font-family: Arial, sans-serif;
+  background: #f2f2f2;
   padding: 20px;
-  background: #fafafa;
+  margin: 0;
 }
 
 h1 {
-  font-size: 24px;
-  font-weight: bold;
+  text-align: center;
   margin-bottom: 20px;
 }
 
 .controls {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 25px;
 }
 
-input, button {
-  padding: 8px 12px;
-  margin-right: 8px;
+input {
+  padding: 8px 10px;
   font-size: 14px;
+  width: 200px;
 }
 
 button {
+  padding: 8px 14px;
+  font-size: 14px;
   cursor: pointer;
+  background: #1e88e5;
+  border: none;
+  color: white;
+  border-radius: 4px;
 }
+
+button:hover {
+  background: #1565c0;
+}
+
+/* ===== GRID ===== */
 
 #hotelGrid {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: fit-content;
+  margin: auto;
 }
 
 .floor-row {
@@ -37,27 +54,36 @@ button {
 }
 
 .floor-label {
-  width: 80px;
   font-weight: bold;
+  width: 75px;
+  text-align: right;
 }
 
 .room {
   width: 45px;
   height: 45px;
+  background: #d9d9d9;
   border-radius: 6px;
+  border: 1px solid #aaa;
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 1px solid #999;
-  background: #e0e0e0;
+  user-select: none;
+}
+
+.room:hover {
+  background: #c7c7c7;
+}
+
+/* OCCUPIED ROOM RED */
+.room.occupied {
+  background: #d62828;
+  color: white;
+  font-weight: bold;
   cursor: pointer;
 }
 
-.room.occupied {
-  background: #c62828;
-  color: white;
-  font-weight: bold;
-}
+/* ===== MODAL ===== */
 
 .modal {
   display: none;
@@ -71,26 +97,32 @@ button {
   align-items: center;
 }
 
-.modal-content {
-  background: white;
-  padding: 20px;
+.modal-box {
   width: 300px;
-  border-radius: 10px;
+  background: white;
+  border-radius: 8px;
+  padding: 18px 20px;
   text-align: center;
 }
 
-.modal-actions {
-  margin-top: 12px;
+.modal-buttons {
   display: flex;
   justify-content: space-between;
+  margin-top: 15px;
 }
 
 #confirmVacateBtn {
-  background: #c62828;
-  color: white;
+  background: #d62828;
+}
+
+#confirmVacateBtn:hover {
+  background: #b71c1c;
 }
 
 #cancelVacateBtn {
-  background: #777;
-  color: white;
+  background: #666;
+}
+
+#cancelVacateBtn:hover {
+  background: #555;
 }
