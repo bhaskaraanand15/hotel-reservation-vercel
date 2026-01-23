@@ -3,20 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <title>Hotel Room Reservation System</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
   <h1>Hotel Room Reservation System</h1>
 
   <div class="controls">
-    <input id="roomInput" type="number" placeholder="Enter 1–5 (bulk) or 101+ (room)">
+    <input id="roomInput" type="number" placeholder="Room or Count (1-99)" />
     <button onclick="bookRoom()">Book</button>
     <button onclick="randomFill()">Random</button>
     <button onclick="resetHotel()">Reset</button>
   </div>
 
   <div id="hotelGrid"></div>
+
+  <div id="vacateModal" class="modal">
+    <div class="modal-content">
+      <h3 id="modalTitle"></h3>
+      <p id="modalRoom"></p>
+      <div class="modal-actions">
+        <button id="confirmVacateBtn">Vacate</button>
+        <button id="cancelVacateBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="./script.js"></script>
 </body>
