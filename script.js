@@ -1,7 +1,8 @@
-const API = "/api";
+// script.js
 
 async function loadStatus() {
-  const res = await fetch(`${API}/rooms/status`);
+  const res = await fetch("/rooms/status");
+  if (!res.ok) return alert("Backend error (status)");
   const data = await res.json();
   renderGrid(data);
 }
@@ -12,17 +13,17 @@ function renderGrid(data) {
 
   for (let floor = 10; floor >= 1; floor--) {
     const row = document.createElement("div");
-    row.classList.add("floor-row");
+    row.className = "floor-row";
 
     const label = document.createElement("span");
-    label.classList.add("floor-label");
-    label.innerText = `Floor ${floor}`;
+    label.className = "floor-label";
+    label.textContent = `Floor ${floor}`;
     row.appendChild(label);
 
     for (let r of data[floor]) {
       const div = document.createElement("div");
-      div.classList.add("room");
-      div.innerText = r.room;
+      div.className = "room";
+      div.textContent = r.room;
 
       if (r.occupied) {
         div.classList.add("occupied");
@@ -36,43 +37,66 @@ function renderGrid(data) {
   }
 }
 
-async function bookRoom() {
-  const val = parseInt(document.getElementById("roomInput").value);
-  if (!val) return alert("Enter value");
 
-  const res = await fetch(`${API}/book?value=${val}`, { method: "POST" });
+async function bookRoom() {
+  const val = document.getElementById("roomInput").value.trim();
+  if (!val) return alert("Enter a number");
+
+  const num = parseInt(val);
+  if (isNaN(num)) return alert("Invalid number");
+
+  const res = await fetch(`/book?value=${num}`, { method: "POST" });
   if (!res.ok) {
-    alert((await res.json()).detail);
+    const e = await res.json();
+    alert(e.detail);
+    return;
   }
-  loadStatus();
+
+  await loadStatus();
 }
+
 
 async function randomFill() {
-  await fetch(`${API}/random`, { method: "POST" });
-  loadStatus();
+  const res = await fetch(`/random`, { method: "POST" });
+  if (!res.ok) {
+    const e = await res.json();
+    alert(e.detail);
+    return;
+  }
+  await loadStatus();
 }
+
 
 async function resetHotel() {
-  await fetch(`${API}/reset`, { method: "POST" });
-  loadStatus();
+  await fetch(`/reset`, { method: "POST" });
+  await loadStatus();
 }
+
+
+// === VACATE MODAL ===
+
+let selectedBid = null;
 
 function openVacateModal(bid, room) {
-  document.getElementById("modalTitle").innerText = `Vacate Booking #${bid}`;
-  document.getElementById("modalRoom").innerText = `Room: ${room}`;
+  selectedBid = bid;
+  document.getElementById("modalTitle").textContent = `Vacate Booking #${bid}?`;
+  document.getElementById("modalRoom").textContent = `Room: ${room}`;
   document.getElementById("vacateModal").style.display = "flex";
-
-  document.getElementById("confirmVacateBtn").onclick = async () => {
-    await fetch(`${API}/vacate?bid=${bid}`, { method: "POST" });
-    closeModal();
-    loadStatus();
-  };
-
-  document.getElementById("cancelVacateBtn").onclick = closeModal;
 }
+
+document.getElementById("confirmVacateBtn").onclick = async () => {
+  await fetch(`/vacate?bid=${selectedBid}`, { method: "POST" });
+  closeModal();
+  await loadStatus();
+};
+
+document.getElementById("cancelVacateBtn").onclick = closeModal;
 
 function closeModal() {
   document.getElementById("vacateModal").style.display = "none";
+  selectedBid = null;
 }
 
+
+// Initial load
 loadStatus();
