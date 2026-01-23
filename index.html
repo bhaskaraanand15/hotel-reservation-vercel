@@ -10,27 +10,13 @@
   <h1>Hotel Room Reservation System</h1>
 
   <div class="controls">
-    <input id="roomInput" type="number" placeholder="Room Number" />
+    <input id="roomInput" type="number" placeholder="Enter 1–5 (bulk) or 101+ (room)">
     <button onclick="bookRoom()">Book</button>
     <button onclick="randomFill()">Random</button>
     <button onclick="resetHotel()">Reset</button>
   </div>
 
-  <!-- Dynamic Grid -->
   <div id="hotelGrid"></div>
-
-  <!-- Vacate Modal -->
-  <div id="vacateModal">
-    <div class="modal-box">
-      <h3 id="modalTitle"></h3>
-      <p id="modalRoom"></p>
-
-      <div class="modal-buttons">
-        <button id="confirmVacateBtn">Vacate</button>
-        <button id="cancelVacateBtn">Cancel</button>
-      </div>
-    </div>
-  </div>
 
   <script src="./script.js"></script>
 </body>
