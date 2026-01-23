@@ -1,10 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from booking_logic import (
-    room_exists, is_occupied, commit_booking,
-    vacate_booking, reset_hotel, state, ALL_ROOMS,
-    random_room
-)
+import booking_logic as logic
 
 app = FastAPI()
 
@@ -18,67 +14,49 @@ app.add_middleware(
 
 @app.get("/rooms/status")
 def status():
-    occupied_map = {}
-
-    for b in state["bookings"]:
+    occupied = {}
+    for b in logic.state["bookings"]:
         for r in b["rooms"]:
-            occupied_map[r] = b["id"]
+            occupied[r] = b["id"]
 
     result = {}
     for floor in range(1, 11):
         result[floor] = [
-            {
-                "room": r,
-                "occupied": r in occupied_map,
-                "booking_id": occupied_map.get(r)
-            }
-            for r in ALL_ROOMS[floor]
+            {"room": r, "occupied": r in occupied, "booking_id": occupied.get(r)}
+            for r in logic.ALL_ROOMS[floor]
         ]
     return result
 
 
 @app.post("/book")
 def book(value: int):
-    rooms, bid_or_err = commit_booking(value)
-
-    # Error case
+    rooms, bid = logic.commit_booking(value)
     if rooms is None:
-        raise HTTPException(400, bid_or_err)
-
-    # Success
-    return {
-        "status": "booked",
-        "booking_id": bid_or_err,
-        "rooms": rooms
-    }
+        raise HTTPException(400, bid)
+    return {"status": "booked", "booking_id": bid, "rooms": rooms}
 
 
 @app.post("/vacate")
 def vacate(bid: int):
-    vacate_booking(bid)
+    logic.vacate_booking(bid)
     return {"status": "vacated", "booking_id": bid}
 
 
 @app.post("/reset")
 def reset():
-    reset_hotel()
+    logic.reset_hotel()
     return {"status": "reset"}
 
 
 @app.post("/random")
-def random_fill():
-    rm = random_room()
+def random():
+    rm = logic.random_room()
     if rm is None:
-        raise HTTPException(400, "No rooms available.")
-
-    rooms, bid = commit_booking(rm)
-    return {
-        "status": "booked",
-        "booking_id": bid,
-        "rooms": rooms
-    }
+        raise HTTPException(400, "No rooms available")
+    rooms, bid = logic.commit_booking(rm)
+    return {"status": "booked", "booking_id": bid, "rooms": rooms}
 
 
 @app.get("/bookings")
 def bookings():
-    return state["bookings"]
+    return logic.state["bookings"]
