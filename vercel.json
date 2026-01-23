@@ -1,18 +1,30 @@
 {
   "version": 2,
-  "functions": {
-    "api/main.py": {
-      "runtime": "python3.10"
+  "builds": [
+    {
+      "src": "api/main.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
     }
-  },
+  ],
   "routes": [
-    { "src": "/rooms/status", "dest": "/api/main.py" },
-    { "src": "/book", "dest": "/api/main.py" },
-    { "src": "/random", "dest": "/api/main.py" },
-    { "src": "/reset", "dest": "/api/main.py" },
-    { "src": "/vacate", "dest": "/api/main.py" },
-    { "src": "/bookings", "dest": "/api/main.py" },
-    { "src": "/api/(.*)", "dest": "/api/main.py" },
+    { "src": "/rooms/status", "dest": "api/main.py" },
+    { "src": "/book", "dest": "api/main.py" },
+    { "src": "/random", "dest": "api/main.py" },
+    { "src": "/reset", "dest": "api/main.py" },
+    { "src": "/vacate", "dest": "api/main.py" },
+    { "src": "/bookings", "dest": "api/main.py" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
