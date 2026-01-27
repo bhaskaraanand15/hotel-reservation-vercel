@@ -6,7 +6,7 @@ from . import booking_logic as logic
 
 app = FastAPI()
 
-# Allow frontend to call backend
+# Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,12 +18,8 @@ app.add_middleware(
 @app.get("/rooms/status")
 def status():
     """
-    Returns structure:
-    {
-      1: [{room, occupied, booking_id}, ...],
-      ...
-      10: [...]
-    }
+    Returns floors 1-10 with occupied & booking IDs
+    Used by frontend grid renderer
     """
     occ = {}
     for b in logic.state["bookings"]:
@@ -46,9 +42,12 @@ def status():
 @app.post("/book")
 def book(value: int):
     """
-    Booking interpretation:
-    - value >= 100 → book room number
-    - value < 100 → bulk booking (count)
+    Booking interpretation handled in frontend:
+      - >=100 => single room
+      - 1-5   => bulk
+      - X-Y   => bulk range -> parsed client side
+
+    Backend only gets final numeric count or room number
     """
     rooms, bid_or_err = logic.commit_booking(value)
 
@@ -64,23 +63,23 @@ def book(value: int):
 
 @app.post("/vacate")
 def vacate(bid: int):
-    logic.vacate(bid)
+    logic.vacate_booking(bid)
     return {"status": "vacated", "booking_id": bid}
 
 
 @app.post("/reset")
 def reset():
-    logic.reset()
+    logic.reset_hotel()
     return {"status": "reset"}
 
 
 @app.post("/random")
 def random():
-    r = logic.random_room()
-    if r is None:
+    rm = logic.random_room()
+    if rm is None:
         raise HTTPException(status_code=400, detail="No rooms available")
 
-    rooms, bid = logic.commit_booking(r)
+    rooms, bid = logic.commit_single(rm)
     return {"status": "booked", "booking_id": bid, "rooms": rooms}
 
 
