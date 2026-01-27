@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import booking_logic as logic
+from . import booking_logic as logic
 
 app = FastAPI()
 
